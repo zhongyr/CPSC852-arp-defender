@@ -41,7 +41,9 @@ class MyWhiteList:
         else:
             return False
 
-
+    def write2file(self):
+        with open(self.file_path, 'w') as outfile:
+            json.dump(self.data,outfile) 
 
 
 
