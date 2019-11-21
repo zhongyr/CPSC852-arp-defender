@@ -2,6 +2,7 @@
 import json
 import os
 import time
+from python_arptable import get_arp_table
 
 '''
  data structure:
