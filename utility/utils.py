@@ -46,6 +46,13 @@ def create_raw_socket(iface_):
     return raw_socket
 
 
+def compare_mac_addr(entry, rx_mac):
+    if entry["HW address"] == rx_mac:
+        return True
+    else:
+        return False
+
+
 def add_to_blacklist(entry):
     """
     if an entry failed in validation, add it to blacklist.

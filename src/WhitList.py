@@ -61,7 +61,6 @@ class MyWhiteList:
         iface_info = get_iface_info(iface_)
         current_arp_table = get_arp_table()
         for entry in current_arp_table:
-            # print(entry["IP address"],entry["HW address"])
             # validation
             if not entry["Device"] == iface_:
                 continue
@@ -69,16 +68,14 @@ class MyWhiteList:
                 self.update_entry(entry["IP address"], entry["HW address"])  # add entry to whitelist
                 add_static_entry(entry)  # add entry to arp-cache
             else:
-                add_to_blacklist(entry)
                 if self.ip_is_exist(entry["IP address"]):
                     self.delete_entry(entry)  # delete entry from whitelist
                 delete_entry(entry)  # delete entry from arp-cache
         self.write2file()
 
-    def _run(self):
-        #while 1:
-        # timer set 5min SIGUSER
-        # recv loop()
-        # self.update_from_cache
-
+    def run(self, iface_):
+        self.update_from_cache(iface_)
+        while 1:
+            loop_listen_arp_message(iface_, self)
+            self.update_from_cache(iface_)
 

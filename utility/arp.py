@@ -1,5 +1,6 @@
 # -*- encoding: utf-8 -*-
 import struct
+import time
 from os import system
 import sys
 
@@ -67,43 +68,48 @@ def arp_request(iface_info_, entry):
     return eth_header + arp_req_message
 
 
-def get_rx_mac_addr(rx_message_):
+def unpack_rx(rx_message_):
     # unpack the arp response
     rx_arp_raw = rx_message_[14:42]
     rx_arp = struct.unpack("HHBBH6s4s6s4s", rx_arp_raw)
-    return mac_bytes2str(rx_arp[5])
+    rx_mac = mac_bytes2str(rx_arp[5])
+    rx_ip = socket.inet_ntoa(rx_arp[6])
+    return {"HW address": rx_mac, "IP address": rx_ip}
 
 
-def listen_arp_message(raw_sock_, loop=True):
-    """
-    :param raw_sock_: raw socket file descriptor
-    :param loop: infinite loop mode argument
-    :return: Not
-    """
-    if loop:  # in loop mode, listen for arp messages infinitely
-        while 1:
-            print("start listening...")
-            try:
-                rx_message = raw_sock_.recv(1024)
-                rx_mac = get_rx_mac_addr(rx_message)
-                print("rx mac: ", rx_mac)
-            except KeyboardInterrupt:
-                print("stop listening...")
-                raw_sock_.close()
-                sys.exit(1)
-    else:  # in single mode, listen for a single arp message
-        raw_sock_.settimeout(0.5)  # set listening timeout
-        rx_mac = None
-        try:
-            rx_message = raw_sock_.recv(1024)
-        except socket.timeout as e:
-            print("listen timeout")
+def rx_arp_message(raw_sock_):
+    raw_sock_.settimeout(0.5)  # set listening timeout
+    rx_mac = None
+    try:
+        rx_message = raw_sock_.recv(1024)
+    except socket.timeout as e:
+        print("listen timeout")
+    else:
+        rx_mac = unpack_rx(rx_message)["HW address"]
+        print("rx mac: ", rx_mac)
+    finally:
+        return rx_mac
+
+
+def loop_listen_arp_message(iface_, WL, duration=600):
+    iface_info = get_iface_info(iface_)
+    raw_socket = create_raw_socket(iface_info["iface"])
+    strat_time = time.time()
+    iface_info = get_iface_info(iface_)
+    while 1:
+        rx_message = raw_socket.recv(1024)
+        rx_entry = unpack_rx(rx_message)
+        if WL.ip_is_exist(rx_entry["IP address"]):
+            if rx_entry["HW address"] == WL.get_mac_by_ip(rx_entry["IP address"]):
+                continue
+        if validate_entry(iface_info, rx_entry):
+            WL.update_entry(rx_entry["IP address"], rx_entry["HW address"])
+            add_static_entry(rx_entry)
         else:
-            rx_mac = get_rx_mac_addr(rx_message)
-            print("rx mac: ", rx_mac)
-        finally:
-            raw_sock_.close()
-            return rx_mac
+            add_to_blacklist(rx_entry)
+        if duration <= time.time() - strat_time:
+            raw_socket.close()
+            break
 
 
 def add_static_entry(entry):
@@ -139,7 +145,9 @@ def validate_entry(iface_info_, entry):
     # send ARP request with raw socket
     raw_socket.send(arp_request(iface_info_, entry))
     # receive the ARP response
-    if listen_arp_message(raw_socket, loop=False) is None:
-        return False
-    else:
+    rx_mac = rx_arp_message(raw_socket)
+    if rx_mac is not None and compare_mac_addr(entry, rx_mac):
+        raw_socket.close()
         return True
+    raw_socket.close()
+    return False
