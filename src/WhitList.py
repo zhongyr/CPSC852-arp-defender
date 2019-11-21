@@ -46,7 +46,14 @@ class MyWhiteList:
     def write2file(self):
         with open(self.file_path, 'w') as outfile:
             json.dump(self.data,outfile) 
-
+    
+    def updateFromCache(self):
+        current_arp_table = get_arp_table()
+        for entry in current_arp_table:
+             #print(entry["IP address"],entry["HW address"])
+             # validation
+             self.update(entry["IP address"], entry["HW address"])
+        self.write2file() 
 
 
 
