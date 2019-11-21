@@ -1,12 +1,13 @@
 
 import json
 import os
+import time
 
 '''
  data structure:
  
  dictionary
- { ip:mac }
+ { ip:{"mac"：mac,"time":time} }
 
 '''
 
@@ -27,11 +28,12 @@ class MyWhiteList:
                 print("ERROR: NOT JSON TYPE")
 
     def update(self, ip, mac):
-        self.data[ip] = mac
+        self.data[ip]["mac"] = mac
+        self.data[ip]["time"] = time.time()
 
     def get_mac_by_ip(self, ip):
         if ip in self.data:
-            return self.data[ip]
+            return self.data[ip]["mac"]
         else:
             return -1
 
