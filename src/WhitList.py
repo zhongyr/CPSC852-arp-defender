@@ -28,6 +28,7 @@ class MyWhiteList:
                 print("ERROR: NOT JSON TYPE")
 
     def update(self, ip, mac):
+        self.data[ip] = {}
         self.data[ip]["mac"] = mac
         self.data[ip]["time"] = time.time()
 

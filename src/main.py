@@ -15,6 +15,6 @@ if __name__ == '__main__':
     for ip, mac in white_list.data.items():
         print(ip,'\t', mac["time"],'\t', mac["mac"])
 
-    updateFromCache(white_list)
+    white_list.updateFromCache()
 
 
