@@ -35,9 +35,9 @@ def arp_message_maker(arp_addr_, op_):
     h_len = 0x06  # hardware address length
     p_len = 0x04  # protocol address length
     s_h_addr = mac_str2bin(arp_addr_.src_mac)  # sender hardware address
-    s_p_addr = socket.inet_aton(arp_addr_.src_ip)  # sender protocol address  # test VM1
+    s_p_addr = socket.inet_aton(arp_addr_.src_ip)  # sender protocol address
     t_h_addr = mac_str2bin(arp_addr_.dest_mac)
-    t_p_addr = socket.inet_aton(arp_addr_.dest_ip)  # target protocol address  # test VM2
+    t_p_addr = socket.inet_aton(arp_addr_.dest_ip)  # target protocol address
     return struct.pack("!HHBBH6s4s6s4s", h_type, p_type, h_len, p_len, op_,
                        s_h_addr, s_p_addr, t_h_addr, t_p_addr)
 
@@ -68,16 +68,33 @@ def arp_request(iface_info_, entry):
     return eth_header + arp_req_message
 
 
+# def unpack_rx(rx_message_):
+#     # unpack the arp response
+#     rx_arp_raw = rx_message_[14:42]
+#     rx_arp = struct.unpack("HHBBH6s4s6s4s", rx_arp_raw)
+#     rx_mac = mac_bytes2str(rx_arp[5])
+#     rx_ip = socket.inet_ntoa(rx_arp[6])
+#     return {"HW address": rx_mac, "IP address": rx_ip}
+
+
 def unpack_rx(rx_message_):
     # unpack the arp response
     rx_arp_raw = rx_message_[14:42]
     rx_arp = struct.unpack("HHBBH6s4s6s4s", rx_arp_raw)
+    return rx_arp
+
+
+def get_rx_address(rx_arp):
+    """
+    get both return mac address and ip address
+    :return:
+    """
     rx_mac = mac_bytes2str(rx_arp[5])
     rx_ip = socket.inet_ntoa(rx_arp[6])
     return {"HW address": rx_mac, "IP address": rx_ip}
 
 
-def rx_arp_message(raw_sock_):
+def get_mac_from_arp_resp(raw_sock_):
     raw_sock_.settimeout(0.5)  # set listening timeout
     rx_mac = None
     try:
@@ -85,8 +102,10 @@ def rx_arp_message(raw_sock_):
     except socket.timeout as e:
         print("listen timeout")
     else:
-        rx_mac = unpack_rx(rx_message)["HW address"]
-        print("rx mac: ", rx_mac)
+        rx_arp = unpack_rx(rx_message)
+        if rx_arp[4] != 0x0001:
+            rx_mac = get_rx_address(rx_arp)["HW address"]
+            print("rx mac from arp resp: ", rx_mac)
     finally:
         return rx_mac
 
@@ -98,7 +117,8 @@ def loop_listen_arp_message(iface_, WL, duration=600):
     iface_info = get_iface_info(iface_)
     while 1:
         rx_message = raw_socket.recv(1024)
-        rx_entry = unpack_rx(rx_message)
+        rx_arp = unpack_rx(rx_message)
+        rx_entry = get_rx_address(rx_arp)
         if WL.ip_is_exist(rx_entry["IP address"]):
             if rx_entry["HW address"] == WL.get_mac_by_ip(rx_entry["IP address"]):
                 continue
@@ -144,8 +164,7 @@ def validate_entry(iface_info_, entry):
     raw_socket = create_raw_socket(iface_info_["iface"])
     # send ARP request with raw socket
     raw_socket.send(arp_request(iface_info_, entry))
-    # receive the ARP response
-    rx_mac = rx_arp_message(raw_socket)
+    rx_mac = get_mac_from_arp_resp(raw_socket)
     if rx_mac is not None and compare_mac_addr(entry, rx_mac):
         raw_socket.close()
         return True
