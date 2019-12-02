@@ -74,8 +74,11 @@ class MyWhiteList:
         self.write2file()
 
     def run(self, iface_):
+        print("update from cache:")
         self.update_from_cache(iface_)
         while 1:
+            print("loop listen:")
             loop_listen_arp_message(iface_, self)
+            print("update from cache:")
             self.update_from_cache(iface_)
 

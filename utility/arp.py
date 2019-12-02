@@ -94,29 +94,38 @@ def get_rx_address(rx_arp):
     return {"HW address": rx_mac, "IP address": rx_ip}
 
 
-def get_mac_from_arp_resp(raw_sock_):
-    raw_sock_.settimeout(0.5)  # set listening timeout
-    rx_mac = None
-    try:
-        rx_message = raw_sock_.recv(1024)
-    except socket.timeout as e:
-        print("listen timeout")
-    else:
-        rx_arp = unpack_rx(rx_message)
-        if rx_arp[4] != 0x0001:
-            rx_mac = get_rx_address(rx_arp)["HW address"]
-            print("rx mac from arp resp: ", rx_mac)
-    finally:
-        return rx_mac
+# def get_mac_from_arp_resp(raw_sock_):
+#     raw_sock_.settimeout(0.5)  # set listening timeout
+#     rx_mac = None
+#     try:
+#         rx_message = raw_sock_.recv(1024)
+#     except socket.timeout as e:
+#         print("listen timeout")
+#     else:
+#         rx_arp = unpack_rx(rx_message)
+#         if socket.ntohs(rx_arp[4]) != 0x0001:
+#             print(rx_arp[4])
+#             rx_mac = get_rx_address(rx_arp)["HW address"]
+#             print("rx mac from arp resp: ", rx_mac)
+#     finally:
+#         return rx_mac
 
 
-def loop_listen_arp_message(iface_, WL, duration=600):
+def loop_listen_arp_message(iface_, WL, duration=5):
     iface_info = get_iface_info(iface_)
     raw_socket = create_raw_socket(iface_info["iface"])
     strat_time = time.time()
     iface_info = get_iface_info(iface_)
+    raw_socket.settimeout(0.5)  # set recv timeout
     while 1:
-        rx_message = raw_socket.recv(1024)
+        try:
+            rx_message = raw_socket.recv(1024)
+        except socket.timeout as e:
+            if duration <= time.time() - strat_time:
+                raw_socket.close()
+                break
+            print("no arp message received")
+            continue
         rx_arp = unpack_rx(rx_message)
         rx_entry = get_rx_address(rx_arp)
         if WL.ip_is_exist(rx_entry["IP address"]):
@@ -164,9 +173,19 @@ def validate_entry(iface_info_, entry):
     raw_socket = create_raw_socket(iface_info_["iface"])
     # send ARP request with raw socket
     raw_socket.send(arp_request(iface_info_, entry))
-    rx_mac = get_mac_from_arp_resp(raw_socket)
-    if rx_mac is not None and compare_mac_addr(entry, rx_mac):
-        raw_socket.close()
-        return True
-    raw_socket.close()
-    return False
+    raw_socket.settimeout(0.5)  # set recv timeout
+    while 1:
+        try:
+            rx_message = raw_socket.recv(1024)
+        except socket.timeout as e:
+            print("receive arp request timeout, validation failed")
+            return False
+        else:
+            rx_arp = unpack_rx(rx_message)
+            if socket.ntohs(rx_arp[4]) == 0x0001:
+                continue
+            else:
+                rx_mac = get_rx_address(rx_arp)["HW address"]
+                print("rx mac from arp resp: ", rx_mac)
+                raw_socket.close()
+                return compare_mac_addr(entry, rx_mac)
