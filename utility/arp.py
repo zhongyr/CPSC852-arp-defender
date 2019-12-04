@@ -43,10 +43,9 @@ def arp_message_maker(arp_addr_, op_):
 def arp_request(iface_info_, entry):
     """
     make an ARP request, get the target mac address
-
     :param iface_info_: host network interface information
     :param entry: arp entry
-    :return: None
+    :return: arp request frame
     """
 
     # create Ethernet header
@@ -68,9 +67,9 @@ def arp_request(iface_info_, entry):
 
 def unpack_rx(rx_message_):
     """
-
-    :param rx_message_:
-    :return:
+    unpack package with given format
+    :param rx_message_: the incoming frame
+    :return: unpacked arp message
     """
     # unpack the arp response
     rx_arp_raw = rx_message_[14:42]
@@ -81,7 +80,7 @@ def unpack_rx(rx_message_):
 def get_rx_address(rx_arp):
     """
     get both return mac address and ip address
-    :return:
+    :return: arp entry format dict
     """
     rx_mac = mac_bytes2str(rx_arp[5])
     rx_ip = socket.inet_ntoa(rx_arp[6])
@@ -90,11 +89,11 @@ def get_rx_address(rx_arp):
 
 def loop_listen_arp_message(iface_, WL, duration=5):
     """
-
-    :param iface_:
-    :param WL:
-    :param duration:
-    :return:
+    listen every incoming arp message, validate every
+    :param iface_: interface
+    :param WL: whitelist instance
+    :param duration: loop listen duration
+    :return: None
     """
     iface_info = get_iface_info(iface_)
     raw_socket = create_raw_socket(iface_info["iface"])

@@ -69,3 +69,13 @@ def add_to_blacklist(entry):
     :return: None
     """
     system("arptables -A INPUT --src-mac {} -j DROP".format(entry["HW address"]))
+
+
+def CNTC_Handler():
+    """
+    Clear all entries from arptables(blacklist) before exit
+    :return: None
+    """
+    print("clear blacklist before exit")
+    system("arptables -F")
+    exit(0)
