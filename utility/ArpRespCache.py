@@ -22,8 +22,7 @@ class ArpRespCache:
         else:
             self.container[mac]["count"] += 1
 
-    def delete_record(self, entry):
-        mac = entry["HW address"]
+    def delete_record(self, mac):
         del self.container[mac]
 
     def check_spoof(self, WL):
