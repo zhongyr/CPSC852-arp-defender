@@ -71,11 +71,12 @@ def add_to_blacklist(entry):
     system("arptables -A INPUT --src-mac {} -j DROP".format(entry["HW address"]))
 
 
-def CNTC_Handler():
+def CNTC_Handler(signum, frame):
     """
     Clear all entries from arptables(blacklist) before exit
     :return: None
     """
     print("clear blacklist before exit")
     system("arptables -F")
+    print("exit arp defender")
     exit(0)

@@ -120,7 +120,7 @@ def loop_listen_arp_message(iface_, WL, duration=5):
                 WL.update_entry(rx_entry["IP address"], rx_entry["HW address"])
                 add_static_entry(rx_entry)
             else:
-                print("detect arp request spoof: {} {}".format(rx_entry["HW address"],
+                print("Detect arp request spoof: {} {}".format(rx_entry["HW address"],
                                                                rx_entry["IP address"]))
                 add_to_blacklist(rx_entry)
             if duration <= time.time() - strat_time:
@@ -171,7 +171,6 @@ def validate_entry(iface_info_, entry):
             rx_message = raw_socket.recv(1024)
         except socket.timeout as e:
             # a timeout indicates that the validation is failed
-            print("receive arp request timeout, validation failed")
             return False
         else:
             rx_arp = unpack_rx(rx_message)
@@ -179,6 +178,5 @@ def validate_entry(iface_info_, entry):
                 continue
             else:
                 rx_mac = get_rx_address(rx_arp)["HW address"]
-                # print("rx mac from arp resp: ", rx_mac)
                 raw_socket.close()
                 return compare_mac_addr(entry, rx_mac)

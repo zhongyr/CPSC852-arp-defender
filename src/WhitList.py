@@ -65,13 +65,18 @@ class MyWhiteList:
             if not entry["Device"] == iface_:
                 continue
             if arp.validate_entry(iface_info, entry):
-                self.update_entry(entry["IP address"], entry["HW address"])  # add entry to whitelist
+                print("Verify entry: {} {}".format(entry["HW address"], entry["IP address"]))
+                self.update_entry(entry["IP address"], entry["HW address"])
                 arp.add_static_entry(entry)  # add entry to arp-cache
+                print('\n')
             else:
+                print("Verify entry failed: {} {}".format(entry["HW address"], entry["IP address"]))
                 if self.ip_is_exist(entry["IP address"]):
-                    self.delete_entry(entry)  # delete entry from whitelist
-                arp.delete_entry(entry)  # delete entry from arp-cache
-                print("verification of the entry failed: {} {}".format(entry["HW address"], entry["IP address"]))
+                    print("Delete entry from whitelist")
+                    self.delete_entry(entry)
+                print("Delete entry from arp cache")
+                arp.delete_entry(entry)
+                print("\n")
         self.write2file()
 
     def run(self, iface_):
