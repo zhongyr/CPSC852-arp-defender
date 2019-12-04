@@ -27,6 +27,9 @@ class ArpRespCache:
         del self.container[mac]
 
     def check_spoof(self, WL):
+        """
+        detect arp response spoof attack by frequency
+        """
         for mac in self.container:
             if self.duration <= time.time() - self.container[mac]["t_start"]:
                 if self.container[mac]["count"] >= self.max_count:
@@ -38,4 +41,6 @@ class ArpRespCache:
                         WL.delete_entry(spoof_entry)  # delete entry from whitelist
                     arp.delete_entry(spoof_entry)  # delete entry from arp-cache
                     arp.add_to_blacklist(spoof_entry)  # add entry to blacklist
+                    print("detect arp response spoof: {} {}".format(spoof_entry["HW address"],
+                                                                              spoof_entry["IP address"]))
                 self.delete_record(mac)

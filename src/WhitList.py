@@ -71,6 +71,7 @@ class MyWhiteList:
                 if self.ip_is_exist(entry["IP address"]):
                     self.delete_entry(entry)  # delete entry from whitelist
                 arp.delete_entry(entry)  # delete entry from arp-cache
+                print("verification of the entry failed: {} {}".format(entry["HW address"], entry["IP address"]))
         self.write2file()
 
     def run(self, iface_):
@@ -81,4 +82,3 @@ class MyWhiteList:
             arp.loop_listen_arp_message(iface_, self)
             print("update from cache:")
             self.update_from_cache(iface_)
-
