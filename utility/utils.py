@@ -19,25 +19,28 @@ def get_iface_info(iface_):
 
 def mac_str2bin(mac_str_):
     """
-        convert string format mac address to binary format
-        :param mac_str_: 1a:2b:3c:4d:5e:6f
-        :return: b'1a2b3c4d5e6f' (binary data represented by hex str)
+    convert string format mac address to binary format
+    :param mac_str_: 1a:2b:3c:4d:5e:6f
+    :return: b'1a2b3c4d5e6f' (binary data represented by hex str)
     """
     return binascii.unhexlify(mac_str_.replace(':', ''))
 
 
 def mac_bytes2str(mac_bytes_):
     """
-        convert bytes obj to mac address format string
-        :param mac_bytes_: bytes obj
-        :return: mack address format string
+    convert bytes obj to mac address format string
+    :param mac_bytes_: bytes obj
+    :return: mack address format string
     """
     hex_str = mac_bytes_.hex()  # get hex like string from bytes: 'ffffffffffff'
     return ':'.join(hex_str[i:i + 2] for i in range(0, 12, 2))  # prettify 'ff:ff:ff:ff:ff:ff'
 
 
 def create_raw_socket(iface_):
-    # create raw socket to send and receive ARP message
+    """
+    :param iface_: interface
+    :return: socket file descriptor
+    """
     _ETH_P_ARP = 0x0806
     raw_socket = socket.socket(socket.PF_PACKET,  # use PF_PACKET for low-level networking interface
                                socket.SOCK_RAW,  # set type to raw socket
@@ -47,10 +50,15 @@ def create_raw_socket(iface_):
 
 
 def compare_mac_addr(entry, rx_mac):
+    """
+    compare the mac address from an entry with the mac address from response
+    :param entry:
+    :param rx_mac:
+    :return:
+    """
     if entry["HW address"] == rx_mac:
         return True
-    else:
-        return False
+    return False
 
 
 def add_to_blacklist(entry):

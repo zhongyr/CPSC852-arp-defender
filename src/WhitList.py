@@ -6,8 +6,8 @@ from python_arptable import get_arp_table
 import sys
 
 sys.path.append("..")
-from utility.arp import *
-from utility.utils import get_iface_info, add_to_blacklist
+from utility import arp
+from utility.utils import get_iface_info
 
 '''
  data structure:
@@ -64,13 +64,13 @@ class MyWhiteList:
             # validation
             if not entry["Device"] == iface_:
                 continue
-            if validate_entry(iface_info, entry):
+            if arp.validate_entry(iface_info, entry):
                 self.update_entry(entry["IP address"], entry["HW address"])  # add entry to whitelist
-                add_static_entry(entry)  # add entry to arp-cache
+                arp.add_static_entry(entry)  # add entry to arp-cache
             else:
                 if self.ip_is_exist(entry["IP address"]):
                     self.delete_entry(entry)  # delete entry from whitelist
-                delete_entry(entry)  # delete entry from arp-cache
+                arp.delete_entry(entry)  # delete entry from arp-cache
         self.write2file()
 
     def run(self, iface_):
@@ -78,7 +78,7 @@ class MyWhiteList:
         self.update_from_cache(iface_)
         while 1:
             print("loop listen:")
-            loop_listen_arp_message(iface_, self)
+            arp.loop_listen_arp_message(iface_, self)
             print("update from cache:")
             self.update_from_cache(iface_)
 

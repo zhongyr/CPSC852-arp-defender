@@ -1,18 +1,17 @@
 # -*- encoding: utf-8 -*-
 import struct
 import time
-from os import system
 import sys
 
 sys.path.append("..")
 from utility.utils import *
+from utility.ArpRespCache import ArpRespCache
 from struct_.struct_ import *
 
 
 def eth_header_maker(eth_addr_, type_=0x0806):
     """
     create an Ethernet herder, the padding and CRC is automatically handled by NIC
-
     :param eth_addr_: Ethernet frame address object: ETHAddr
     :param type_: type of Ethernet data
     :return: packed Ethernet header (binary format string)
@@ -25,7 +24,6 @@ def eth_header_maker(eth_addr_, type_=0x0806):
 def arp_message_maker(arp_addr_, op_):
     """
     create an ARP request or arp response message
-
     :param arp_addr_: ARP message address object: ARPAddr
     :param op_: 2 bytes ARP message operation code, 0x0001: ARP Request, 0x0002: ARP Response
     :return: packed Ethernet header (binary format string)
@@ -68,16 +66,12 @@ def arp_request(iface_info_, entry):
     return eth_header + arp_req_message
 
 
-# def unpack_rx(rx_message_):
-#     # unpack the arp response
-#     rx_arp_raw = rx_message_[14:42]
-#     rx_arp = struct.unpack("HHBBH6s4s6s4s", rx_arp_raw)
-#     rx_mac = mac_bytes2str(rx_arp[5])
-#     rx_ip = socket.inet_ntoa(rx_arp[6])
-#     return {"HW address": rx_mac, "IP address": rx_ip}
-
-
 def unpack_rx(rx_message_):
+    """
+
+    :param rx_message_:
+    :return:
+    """
     # unpack the arp response
     rx_arp_raw = rx_message_[14:42]
     rx_arp = struct.unpack("HHBBH6s4s6s4s", rx_arp_raw)
@@ -94,28 +88,18 @@ def get_rx_address(rx_arp):
     return {"HW address": rx_mac, "IP address": rx_ip}
 
 
-# def get_mac_from_arp_resp(raw_sock_):
-#     raw_sock_.settimeout(0.5)  # set listening timeout
-#     rx_mac = None
-#     try:
-#         rx_message = raw_sock_.recv(1024)
-#     except socket.timeout as e:
-#         print("listen timeout")
-#     else:
-#         rx_arp = unpack_rx(rx_message)
-#         if socket.ntohs(rx_arp[4]) != 0x0001:
-#             print(rx_arp[4])
-#             rx_mac = get_rx_address(rx_arp)["HW address"]
-#             print("rx mac from arp resp: ", rx_mac)
-#     finally:
-#         return rx_mac
-
-
 def loop_listen_arp_message(iface_, WL, duration=5):
+    """
+
+    :param iface_:
+    :param WL:
+    :param duration:
+    :return:
+    """
     iface_info = get_iface_info(iface_)
     raw_socket = create_raw_socket(iface_info["iface"])
     strat_time = time.time()
-    iface_info = get_iface_info(iface_)
+    resp_cache = ArpRespCache()
     raw_socket.settimeout(0.5)  # set recv timeout
     while 1:
         try:
@@ -124,21 +108,24 @@ def loop_listen_arp_message(iface_, WL, duration=5):
             if duration <= time.time() - strat_time:
                 raw_socket.close()
                 break
-            print("no arp message received")
             continue
         rx_arp = unpack_rx(rx_message)
         rx_entry = get_rx_address(rx_arp)
-        if WL.ip_is_exist(rx_entry["IP address"]):
-            if rx_entry["HW address"] == WL.get_mac_by_ip(rx_entry["IP address"]):
-                continue
-        if validate_entry(iface_info, rx_entry):
-            WL.update_entry(rx_entry["IP address"], rx_entry["HW address"])
-            add_static_entry(rx_entry)
-        else:
-            add_to_blacklist(rx_entry)
-        if duration <= time.time() - strat_time:
-            raw_socket.close()
-            break
+        if socket.ntohs(rx_arp[4]) == 0x0001:  # handle arp request message
+            if WL.ip_is_exist(rx_entry["IP address"]):
+                if rx_entry["HW address"] == WL.get_mac_by_ip(rx_entry["IP address"]):
+                    continue
+            if validate_entry(iface_info, rx_entry):
+                WL.update_entry(rx_entry["IP address"], rx_entry["HW address"])
+                add_static_entry(rx_entry)
+            else:
+                add_to_blacklist(rx_entry)
+            if duration <= time.time() - strat_time:
+                raw_socket.close()
+                break
+        if socket.ntohs(rx_arp[4]) == 0x0002:  # handle arp response message
+            resp_cache.cache_entry(rx_entry["HW address"])
+            resp_cache.check_spoof()
 
 
 def add_static_entry(entry):
@@ -164,7 +151,6 @@ def validate_entry(iface_info_, entry):
     Validate an arp entry. Send unique arp request to the IP address of the entry,
     if there is a response, that means the entry is not spoofed. Otherwise it indicates
     that this is a spoofed entry.
-
     :param iface_info_: host network interface information
     :param entry: arp entry
     :return: Boolean
@@ -178,11 +164,12 @@ def validate_entry(iface_info_, entry):
         try:
             rx_message = raw_socket.recv(1024)
         except socket.timeout as e:
+            # a timeout indicates that the validation is failed
             print("receive arp request timeout, validation failed")
             return False
         else:
             rx_arp = unpack_rx(rx_message)
-            if socket.ntohs(rx_arp[4]) == 0x0001:
+            if socket.ntohs(rx_arp[4]) == 0x0001:  # ignore arp request message
                 continue
             else:
                 rx_mac = get_rx_address(rx_arp)["HW address"]
