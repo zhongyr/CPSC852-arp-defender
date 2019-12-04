@@ -119,7 +119,8 @@ def loop_listen_arp_message(iface_, WL, duration=5):
                 WL.update_entry(rx_entry["IP address"], rx_entry["HW address"])
                 add_static_entry(rx_entry)
             else:
-                print("detect arp request spoof: {} {}".format(rx_entry["HW address"], rx_entry["IP address"]))
+                print("detect arp request spoof: {} {}".format(rx_entry["HW address"],
+                                                               rx_entry["IP address"]))
                 add_to_blacklist(rx_entry)
             if duration <= time.time() - strat_time:
                 raw_socket.close()

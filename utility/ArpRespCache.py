@@ -43,5 +43,6 @@ class ArpRespCache:
                     self.spoof_entries.append(spoof_entry)
                     arp.delete_entry(spoof_entry)  # delete entry from arp-cache
                     arp.add_to_blacklist(spoof_entry)  # add entry to blacklist
-
+                    print("detect arp respnose spoof: {} {}".format(spoof_entry["HW address"],
+                                                                    spoof_entry["IP address"]))
                 self.delete_record(mac)
