@@ -6,8 +6,9 @@ from utility import arp
 
 
 class ArpRespCache:
-    container = {}
-    max_count = 5
+    container = {}  # cache all incoming arp response messages
+    spoof_entries = []  # record all spoof mac entries
+    max_count = 5  # Maximum value of the same entry that can be received within duration
     duration = 1
 
     def add_new_entry(self, entry):
@@ -17,10 +18,11 @@ class ArpRespCache:
 
     def cache_entry(self, entry):
         mac = entry["HW address"]
-        if mac not in self.container:
-            self.add_new_entry(entry)
-        else:
-            self.container[mac]["count"] += 1
+        if entry not in self.spoof_entries:
+            if mac not in self.container:
+                self.add_new_entry(entry)
+            else:
+                self.container[mac]["count"] += 1
 
     def delete_record(self, mac):
         del self.container[mac]
@@ -36,10 +38,10 @@ class ArpRespCache:
                     # that indicates it is an arp poison attack
                     ip = self.container[mac]["IP address"]
                     spoof_entry = {"HW address": mac, "IP address": ip}
-                    if WL.ip_is_exist(ip):
+                    if WL.ip_is_exist(ip) and WL.get_mac_by_ip(ip) == mac:
                         WL.delete_entry(spoof_entry)  # delete entry from whitelist
+                    self.spoof_entries.append(spoof_entry)
                     arp.delete_entry(spoof_entry)  # delete entry from arp-cache
                     arp.add_to_blacklist(spoof_entry)  # add entry to blacklist
-                    print("detect arp response spoof: {} {}".format(spoof_entry["HW address"],
-                                                                              spoof_entry["IP address"]))
+
                 self.delete_record(mac)
