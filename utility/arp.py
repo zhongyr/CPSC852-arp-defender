@@ -127,6 +127,9 @@ def loop_listen_arp_message(iface_, WL, duration=5):
         if socket.ntohs(rx_arp[4]) == 0x0002:  # handle arp response message
             resp_cache.cache_entry(rx_entry)
             resp_cache.check_spoof(WL)
+            if duration <= time.time() - strat_time:
+                raw_socket.close()
+                break
 
 
 def add_static_entry(entry):
