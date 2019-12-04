@@ -1,6 +1,7 @@
 # -*- encoding: utf-8 -*-
 import struct
 import time
+import signal
 import sys
 
 sys.path.append("..")
@@ -99,6 +100,7 @@ def loop_listen_arp_message(iface_, WL, duration=5):
     raw_socket = create_raw_socket(iface_info["iface"])
     strat_time = time.time()
     resp_cache = ArpRespCache()
+    signal.signal(signal.SIGINT, CNTC_Handler)
     raw_socket.settimeout(0.5)  # set recv timeout
     while 1:
         try:
