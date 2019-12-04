@@ -29,7 +29,7 @@ class ArpRespCache:
         """
         detect arp response spoof attack by frequency
         """
-        for mac in self.container.keys():
+        for mac in list(self.container):
             if self.duration <= time.time() - self.container[mac]["t_start"]:
                 if self.container[mac]["count"] >= self.max_count:
                     # if we receive 5 or more same arp responses within 0.5 seconds
