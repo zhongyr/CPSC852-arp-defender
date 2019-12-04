@@ -61,6 +61,9 @@ def compare_mac_addr(entry, rx_mac):
     return False
 
 
+blacklist = []
+
+
 def add_to_blacklist(entry):
     """
     if an entry failed in validation, add it to blacklist.
@@ -68,6 +71,7 @@ def add_to_blacklist(entry):
     :param entry: src_mac_address
     :return: None
     """
+    blacklist.append(entry)
     system("arptables -A INPUT --src-mac {} -j DROP".format(entry["HW address"]))
 
 
@@ -76,7 +80,7 @@ def CNTC_Handler(signum, frame):
     Clear all entries from arptables(blacklist) before exit
     :return: None
     """
-    print("clear blacklist before exit")
+    print("\nclear blacklist before exit")
     system("arptables -F")
     print("exit arp defender")
     exit(0)
